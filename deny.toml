@@ -1,0 +1,40 @@
+[graph]
+all-features = false
+no-default-features = false
+
+[advisories]
+ignore = [
+    # chrono is unmaintained (2026-11-17). The SDK doesn't use it, but rmcp
+    # depends on it and turns on schemars' `chrono04`, up to rmcp 3.11.0.
+    # Remove once rmcp makes it optional (modelcontextprotocol/rust-sdk#1474)
+    # and the SDK turns it off.
+    { id = "RUSTSEC-2026-0543", reason = "unmaintained, not a vulnerability; only through rmcp, until modelcontextprotocol/rust-sdk#1474" },
+]
+
+[licenses]
+unused-allowed-license = "allow"
+allow = [
+    "MIT",
+    "Apache-2.0",
+    "Apache-2.0 WITH LLVM-exception",
+    "BSD-2-Clause",
+    "BSD-3-Clause",
+    "CDLA-Permissive-2.0",
+    "ISC",
+    "Unicode-3.0",
+    "Zlib",
+]
+confidence-threshold = 0.8
+
+[licenses.private]
+ignore = false
+
+[bans]
+multiple-versions = "warn"
+wildcards = "deny"
+external-default-features = "allow"
+
+[sources]
+unknown-registry = "deny"
+unknown-git = "deny"
+allow-registry = ["https://github.com/rust-lang/crates.io-index"]

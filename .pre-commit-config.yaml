@@ -1,0 +1,92 @@
+# pre-commit prints a hook's output only when the hook fails, unless the hook
+# sets `verbose: true`. Only the cleanup sets it, to tell whether it cleaned.
+# pre-commit writes a hook's output in one go when the hook ends. If that
+# output goes to a non-blocking pipe, as ssh can make it during `git push`,
+# pre-commit crashes when the output doesn't fit in the pipe's buffer (64 KiB
+# on macOS).
+repos:
+  - repo: local
+    hooks:
+      # This hook runs `cargo clean` when the build artifacts are stale (see
+      # scripts/clean.sh). It runs first, so the hooks after it rebuild only
+      # what they need. CI has no job for it.
+      - id: clean
+        name: Clean Stale Artifacts
+        description: Cleans the build artifacts when they are old or large.
+        entry: just clean-stale
+        language: system
+        always_run: true
+        pass_filenames: false
+        verbose: true
+        stages: [pre-push]
+      # This hook checks that all Rust code is formatted with rustfmt. It does
+      # not rewrite files; run `just fmt` to fix formatting.
+      - id: fmt
+        name: Check Formatting
+        description: Checks that all Rust code is formatted with rustfmt.
+        entry: just fmt-check
+        language: system
+        always_run: true
+        pass_filenames: false
+        stages: [pre-push]
+      # This hook runs clippy and fails on any warning.
+      - id: lint
+        name: Lint Rust Code
+        description: Runs clippy on all targets, treating warnings as errors.
+        entry: just lint
+        language: system
+        always_run: true
+        pass_filenames: false
+        stages: [pre-push]
+      # This hook builds the library without dev-dependencies, the way
+      # dependents build it. It catches code that only compiles because a
+      # dev-dependency enables a feature, which clippy and the tests miss.
+      - id: build
+        name: Build Library
+        description: Builds the library without dev-dependencies.
+        entry: just build
+        language: system
+        always_run: true
+        pass_filenames: false
+        stages: [pre-push]
+      # This hook runs the unit and doc tests. `-q` prints a dot per passing
+      # test instead of a line, so the output stays small; a failing test's
+      # output is still printed in full.
+      - id: test
+        name: Run Tests
+        description: Runs all unit and doc tests.
+        entry: just test -q
+        language: system
+        always_run: true
+        pass_filenames: false
+        stages: [pre-push]
+      # This hook builds the docs, private items included, and fails on any
+      # rustdoc warning, such as a broken intra-doc link.
+      - id: doc
+        name: Check Docs
+        description: Builds the docs, treating rustdoc warnings as errors.
+        entry: just doc
+        language: system
+        always_run: true
+        pass_filenames: false
+        stages: [pre-push]
+      # This hook runs cargo-deny to check dependency licenses, security
+      # advisories, and sources against deny.toml.
+      - id: deny
+        name: Check Dependencies
+        description: Checks dependency licenses, advisories, and sources.
+        entry: just deny
+        language: system
+        always_run: true
+        pass_filenames: false
+        stages: [pre-push]
+      # This hook runs zizmor to check the workflows and the Dependabot config
+      # for security issues, such as unpinned actions or template injection.
+      - id: zizmor
+        name: Check Workflows
+        description: Checks the GitHub workflows for security issues.
+        entry: just zizmor
+        language: system
+        always_run: true
+        pass_filenames: false
+        stages: [pre-push]

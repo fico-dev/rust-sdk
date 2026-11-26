@@ -1,0 +1,26 @@
+# Opens weekly PRs that update the pinned GitHub Actions (their commit SHAs),
+# the crates in Cargo.lock, and the Python dev tools (pre-commit, zizmor) in
+# pyproject.toml and uv.lock. The cooldown skips releases younger than 7
+# days, so a compromised release is likely to be caught and yanked first.
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 7
+
+  - package-ecosystem: cargo
+    directory: /
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 7
+
+  - package-ecosystem: uv
+    directory: /
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 7

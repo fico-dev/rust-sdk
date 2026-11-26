@@ -1,0 +1,230 @@
+name: CI/CD checks
+on:
+  pull_request:
+    types: [opened, reopened, synchronize, ready_for_review]
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+# Cancels a run when a newer commit is pushed to the same branch or PR.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+# Each job first starts harden-runner. It blocks outbound connections to any
+# host outside the job's `allowed-endpoints` and disables sudo and containers,
+# so a step can't turn it off. A blocked connection fails its step and is
+# named in the run summary; if a step needs it, add the host to the list.
+jobs:
+  # Checks that all Rust code is formatted with rustfmt.
+  fmt:
+    name: rust-sdk / fmt
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - name: harden runner
+        uses: step-security/harden-runner@aebdcf6156ab6691adf63218240e476564a1ed4c # v2.23.0
+        with:
+          egress-policy: block
+          disable-sudo-and-containers: true
+          allowed-endpoints: >
+            github.com:443
+            index.crates.io:443
+            static.crates.io:443
+            static.rust-lang.org:443
+
+      - name: git clone
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: install rust
+        run: rustup toolchain install
+
+      - name: install just
+        run: cargo install --locked just@1.58.0
+
+      - name: check formatting
+        run: just fmt-check
+  # Checks that clippy passes on all targets, treating warnings as errors.
+  lint:
+    name: rust-sdk / lint
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - name: harden runner
+        uses: step-security/harden-runner@aebdcf6156ab6691adf63218240e476564a1ed4c # v2.23.0
+        with:
+          egress-policy: block
+          disable-sudo-and-containers: true
+          allowed-endpoints: >
+            github.com:443
+            index.crates.io:443
+            static.crates.io:443
+            static.rust-lang.org:443
+
+      - name: git clone
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: install rust
+        run: rustup toolchain install
+
+      - name: install just
+        run: cargo install --locked just@1.58.0
+
+      - name: lint rust code
+        run: just lint
+  # Checks that the library builds without dev-dependencies.
+  build:
+    name: rust-sdk / build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - name: harden runner
+        uses: step-security/harden-runner@aebdcf6156ab6691adf63218240e476564a1ed4c # v2.23.0
+        with:
+          egress-policy: block
+          disable-sudo-and-containers: true
+          allowed-endpoints: >
+            github.com:443
+            index.crates.io:443
+            static.crates.io:443
+            static.rust-lang.org:443
+
+      - name: git clone
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: install rust
+        run: rustup toolchain install
+
+      - name: install just
+        run: cargo install --locked just@1.58.0
+
+      - name: build library
+        run: just build
+  # Checks that all unit and doc tests pass.
+  test:
+    name: rust-sdk / test
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - name: harden runner
+        uses: step-security/harden-runner@aebdcf6156ab6691adf63218240e476564a1ed4c # v2.23.0
+        with:
+          egress-policy: block
+          disable-sudo-and-containers: true
+          allowed-endpoints: >
+            github.com:443
+            index.crates.io:443
+            static.crates.io:443
+            static.rust-lang.org:443
+
+      - name: git clone
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: install rust
+        run: rustup toolchain install
+
+      - name: install just
+        run: cargo install --locked just@1.58.0
+
+      - name: run tests
+        run: just test
+  # Checks that the docs build without rustdoc warnings.
+  doc:
+    name: rust-sdk / doc
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - name: harden runner
+        uses: step-security/harden-runner@aebdcf6156ab6691adf63218240e476564a1ed4c # v2.23.0
+        with:
+          egress-policy: block
+          disable-sudo-and-containers: true
+          allowed-endpoints: >
+            github.com:443
+            index.crates.io:443
+            static.crates.io:443
+            static.rust-lang.org:443
+
+      - name: git clone
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: install rust
+        run: rustup toolchain install
+
+      - name: install just
+        run: cargo install --locked just@1.58.0
+
+      - name: check docs
+        run: just doc
+  # Checks dependency licenses, advisories, and sources against deny.toml.
+  deny:
+    name: rust-sdk / deny
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - name: harden runner
+        uses: step-security/harden-runner@aebdcf6156ab6691adf63218240e476564a1ed4c # v2.23.0
+        with:
+          egress-policy: block
+          disable-sudo-and-containers: true
+          allowed-endpoints: >
+            github.com:443
+            index.crates.io:443
+            static.crates.io:443
+            static.rust-lang.org:443
+
+      - name: git clone
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: install rust
+        run: rustup toolchain install
+
+      - name: install just and cargo-deny
+        run: cargo install --locked just@1.58.0 cargo-deny@0.20.2
+
+      - name: check dependencies
+        run: just deny
+  # Checks the workflows and the Dependabot config for security issues with
+  # zizmor, such as unpinned actions or template injection.
+  zizmor:
+    name: rust-sdk / zizmor
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - name: harden runner
+        uses: step-security/harden-runner@aebdcf6156ab6691adf63218240e476564a1ed4c # v2.23.0
+        with:
+          egress-policy: block
+          disable-sudo-and-containers: true
+          allowed-endpoints: >
+            api.github.com:443
+            files.pythonhosted.org:443
+            github.com:443
+            pypi.org:443
+
+      - name: git clone
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      # Without a `version`, the action installs the zizmor its pinned commit
+      # locks, by hash, so Dependabot moves zizmor along with the action.
+      - name: check workflows
+        uses: zizmorcore/zizmor-action@1b4550e929643b8b26a62303c6bd64814271a4f1 # v0.9.2
+        with:
+          advanced-security: false
+          annotations: true
