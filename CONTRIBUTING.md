@@ -106,7 +106,8 @@ A suite that takes more than 10 minutes fails. If a suite cannot delete its
 workspace, it prints the workspace's ID.
 
 The `integration tests` workflow (`.github/workflows/integration.yml`) runs
-each suite in its own job, with the repository secret `FICO_API_KEY`.
+each suite in its own job, with `FICO_API_KEY` set from the repository secret
+`FICO_DECISIONOPS_API_KEY`.
 
 ## Upgrading `uv`
 

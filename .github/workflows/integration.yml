@@ -64,5 +64,5 @@ jobs:
       - name: run the integration suite
         run: just integration "$SUITE"
         env:
-          FICO_API_KEY: ${{ secrets.FICO_API_KEY }}
+          FICO_API_KEY: ${{ secrets.FICO_DECISIONOPS_API_KEY }}
           SUITE: ${{ matrix.suite }}
