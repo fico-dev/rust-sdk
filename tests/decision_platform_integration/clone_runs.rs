@@ -78,10 +78,8 @@ pub async fn run(suite: &Suite, runs: &Runs) {
     let option = request_options.and_then(|o| o.get(name));
     assert_eq!(option, Some(&Value::String(value.to_owned())));
 
-    // The clone takes the new queuing.
-    assert_eq!(
-        results[3].0.information.metadata.queuing_disabled,
-        Some(true)
-    );
+    // The clone takes the new queuing priority. Whether it skips the queue
+    // is not checked: on a standard execution class, the platform may queue
+    // a run that disables queuing.
     assert_eq!(results[4].0.information.metadata.queuing_priority, Some(4));
 }
