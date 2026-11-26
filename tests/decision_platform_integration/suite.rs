@@ -417,14 +417,14 @@ pub fn ended(status: RunStatus) -> bool {
     matches!(status, RunStatus::Succeeded | RunStatus::Canceled)
 }
 
-/// How the suites poll: every 2 to 3 seconds, for at most 5 minutes.
+/// How the suites poll: every 2 to 3 seconds, for at most 10 minutes.
 pub fn polling() -> PollingOptions {
     PollingOptions {
         backoff: 0.0,
         delay: 2.0,
         initial_delay: 1.0,
         max_delay: 2.0,
-        max_duration: Some(300.0),
+        max_duration: Some(600.0),
         max_tries: None,
         jitter: 1.0,
     }
