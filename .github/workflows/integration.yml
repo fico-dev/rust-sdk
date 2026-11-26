@@ -43,8 +43,10 @@ jobs:
             github.com:443
             index.crates.io:443
             production-nextmv-tmp-run-data-us-east-2.s3.us-east-2.amazonaws.com:443
+            production-upload-artifact-bucket-us-east-2.s3.us-east-2.amazonaws.com:443
             pypi.org:443
             release-assets.githubusercontent.com:443
+            releases.astral.sh:443
             static.crates.io:443
             static.rust-lang.org:443
 
