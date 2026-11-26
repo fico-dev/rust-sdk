@@ -1,0 +1,6 @@
+# Changes to CI, the dependency policy, the toolchain and the locked
+# dependency versions need a review from an admin.
+/.github/             @fico-dev/admin
+/deny.toml            @fico-dev/admin
+/rust-toolchain.toml  @fico-dev/admin
+/Cargo.lock           @fico-dev/admin

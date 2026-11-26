@@ -1,0 +1,68 @@
+name: integration tests
+on:
+  pull_request:
+    types: [opened, reopened, synchronize, ready_for_review]
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+# Runs one at a time per branch or PR. A run is never cancelled: it would
+# leave its workspaces on the platform.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  # Runs a live integration suite against the platform, one job per content
+  # format.
+  integration:
+    name: rust-sdk / integration (${{ matrix.suite }})
+    runs-on: ubuntu-24.04
+    # Well above a suite's own 10-minute limit, so the suite fails and deletes
+    # its workspace before the job is killed.
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        suite: [json, multi_file]
+    steps:
+      # Blocks outbound connections outside `allowed-endpoints`, as in ci.yml.
+      # Besides the build's hosts, the suites reach the platform's API, the
+      # `uv` release on GitHub, PyPI for the fixtures' dependencies, and the
+      # storage the platform's presigned upload and download URLs point to.
+      - name: harden runner
+        uses: step-security/harden-runner@aebdcf6156ab6691adf63218240e476564a1ed4c # v2.23.0
+        with:
+          egress-policy: block
+          disable-sudo-and-containers: true
+          allowed-endpoints: >
+            api.cloud.nextmv.io:443
+            files.pythonhosted.org:443
+            github.com:443
+            index.crates.io:443
+            production-nextmv-tmp-run-data-us-east-2.s3.us-east-2.amazonaws.com:443
+            pypi.org:443
+            release-assets.githubusercontent.com:443
+            static.crates.io:443
+            static.rust-lang.org:443
+
+      - name: git clone
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: install rust
+        run: rustup toolchain install
+
+      - name: install just
+        run: cargo install --locked just@1.58.0
+
+      # Only this step gets the API key, so the steps before it, which build
+      # code from crates.io, can't read it.
+      - name: run the integration suite
+        run: just integration "$SUITE"
+        env:
+          FICO_API_KEY: ${{ secrets.FICO_API_KEY }}
+          SUITE: ${{ matrix.suite }}

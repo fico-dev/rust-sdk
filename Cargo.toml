@@ -1,0 +1,45 @@
+[package]
+name = "fico-sdk"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.98"
+description = "Official Rust SDK for the FICO® platform."
+license = "Apache-2.0"
+repository = "https://github.com/fico-dev/rust-sdk"
+readme = "README.md"
+authors = ["FICO"]
+keywords = ["fico", "sdk"]
+categories = ["api-bindings"]
+include = ["/src", "/tests/mock_server/mod.rs", "/Cargo.toml", "/README.md", "/LICENSE"]
+
+[dependencies]
+aws-lc-rs = { version = "1.18", default-features = false, features = ["aws-lc-sys"] }
+flate2 = "1"
+hyper = { version = "1", default-features = false, features = ["server", "http1"] }
+hyper-util = { version = "0.1", default-features = false, features = ["server", "service", "tokio"] }
+reqwest = { version = "0.13", default-features = false, features = ["rustls", "http2"] }
+rmcp = { version = "3.5", default-features = false, features = ["server", "transport-io", "transport-streamable-http-server"] }
+schemars = "1"
+serde = { version = "1", features = ["derive"] }
+serde-saphyr = "1"
+serde_json = { version = "1", features = ["float_roundtrip"] }
+tar = { version = "0.4.46", default-features = false }
+tokio = { version = "1", features = ["fs", "io-util", "net", "process", "rt", "sync", "time"] }
+
+[dev-dependencies]
+tokio = { version = "1", features = ["io-util", "macros", "net", "rt-multi-thread"] }
+
+# Runs workspaces whose code is the test binary itself, so libtest's output on
+# stdout must not be there: see the file's docs.
+[[test]]
+name = "decision_runtime"
+harness = false
+
+[lints.rust]
+missing_docs = "warn"
+unsafe_code = "forbid"
+
+[lints.clippy]
+all = "warn"
+missing_errors_doc = "warn"
+missing_panics_doc = "warn"

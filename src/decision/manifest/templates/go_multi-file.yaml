@@ -1,0 +1,32 @@
+# This manifest holds the information the workspace needs to run on the FICO® platform.
+
+# Type and runtime specify the language and environment of the workspace.
+type: binary
+runtime: ghcr.io/nextmv-io/runtime/default:latest
+
+# Directives to build a Go binary from the workspace.
+build:
+  command: go build -o main .
+  # Use Linux ARM64 as the target for the FICO® platform.
+  environment:
+    GOOS: linux
+    GOARCH: arm64
+
+# List all files/directories that should be included in the workspace. Globbing
+# (e.g.: configs/*.json) is supported.
+files:
+  - main
+
+# Workspace configurations.
+configuration:
+  # Define the content format of the workspace, one of: json, multi-file.
+  content:
+    format: multi-file # Read and write files from disk.
+    # Configuration of the multi-file format.
+    multi-file:
+      input:
+        path: inputs # Directory where the workspace will read input files from.
+      output:
+        solutions: outputs/solutions # Directory where the workspace will write solution files to.
+        metrics: outputs/metrics.json # Path where the workspace will write metrics to.
+        assets: outputs/assets.json # Path where the workspace will write assets to.
