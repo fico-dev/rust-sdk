@@ -7,7 +7,7 @@ dependencies = []
 
 [dependency-groups]
 dev = [
-    "pre-commit==4.6.0",
+    "pre-commit==4.7.0",
     "zizmor==1.33.1",
 ]
 
