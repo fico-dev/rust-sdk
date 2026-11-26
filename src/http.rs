@@ -25,6 +25,7 @@ use reqwest::Url;
 use reqwest::header::{self, HeaderMap, HeaderName, HeaderValue};
 use reqwest::redirect;
 
+use crate::error::redact_query;
 use crate::tool::BoxFuture;
 use crate::{Error, Result};
 
@@ -636,7 +637,7 @@ async fn within<T>(limit: Duration, url: &Url, future: impl Future<Output = T>) 
     tokio::time::timeout(limit, future)
         .await
         .map_err(|_| Error::Timeout {
-            url: url.to_string(),
+            url: redact_query(url.as_str()),
             after: limit,
         })
 }
@@ -724,9 +725,11 @@ pub(crate) fn bearer_header(token: &str) -> Result<HeaderValue> {
 /// connect limit, and running out of it is a connection error, whose source
 /// says it timed out: the server never got the request. Another timeout is
 /// the operating system's, during a read, and is reported with the read
-/// limit.
+/// limit. The error keeps the URL with its query redacted, and reqwest's
+/// error none, so neither shows a presigned URL's credentials.
 fn transport_error(error: reqwest::Error, url: &Url, read: Duration) -> Error {
-    let url = url.to_string();
+    let url = redact_query(url.as_str());
+    let error = error.without_url();
     if error.is_connect() {
         Error::Connect {
             url,
@@ -950,6 +953,46 @@ mod tests {
         );
         assert_eq!(request.header("authorization"), None);
         assert_eq!(request.body, b"file contents");
+    }
+
+    #[tokio::test]
+    async fn keeps_the_query_out_of_connect_errors() {
+        // Nothing listens on the port once the listener is dropped, so the
+        // connection is refused.
+        let port = std::net::TcpListener::bind("127.0.0.1:0")
+            .unwrap()
+            .local_addr()
+            .unwrap()
+            .port();
+        let err = Client::builder("https://host")
+            .retry(RetryPolicy::none())
+            .build()
+            .unwrap()
+            .put(format!("http://127.0.0.1:{port}/upload?signature=secret"))
+            .body("file contents")
+            .send()
+            .await
+            .unwrap_err();
+
+        assert!(matches!(err, Error::Connect { .. }), "{err:?}");
+        assert_eq!(
+            err.to_string(),
+            format!("could not connect to http://127.0.0.1:{port}/upload?<redacted>")
+        );
+        assert!(!format!("{err:?}").contains("secret"), "{err:?}");
+    }
+
+    #[tokio::test]
+    async fn keeps_the_query_out_of_status_errors() {
+        let server = MockServer::start(vec![MockResponse::new(403)]).await;
+        let err = client(server.url())
+            .get("/upload?signature=secret")
+            .send()
+            .await
+            .unwrap_err();
+
+        assert!(matches!(err, Error::Status { status: 403, .. }), "{err:?}");
+        assert!(!format!("{err} {err:?}").contains("secret"), "{err:?}");
     }
 
     #[tokio::test]

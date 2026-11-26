@@ -9,6 +9,7 @@ use serde_json::Value;
 
 use super::Client;
 use super::request::Parts;
+use crate::error::redact_query;
 use crate::{Error, Result};
 
 const DEFAULT_MAX_PAGES: usize = 500;
@@ -159,7 +160,7 @@ impl<T: DeserializeOwned> Paginator<T> {
         self.pages += 1;
 
         let malformed = |reason: String| Error::Pagination {
-            reason: format!("response from {} {reason}", response.url()),
+            reason: format!("response from {} {reason}", redact_query(response.url())),
         };
         let Value::Object(mut page) = response.json::<Value>()? else {
             return Err(malformed("is not a JSON object".to_owned()));
@@ -170,10 +171,7 @@ impl<T: DeserializeOwned> Paginator<T> {
                 .into_iter()
                 .map(serde_json::from_value)
                 .collect::<Result<Vec<T>, _>>()
-                .map_err(|e| Error::Decode {
-                    url: response.url().to_owned(),
-                    source: Box::new(e),
-                })?,
+                .map_err(|e| response.decode_error(e))?,
             Some(_) => {
                 return Err(malformed(format!(
                     "has a non-list `{}` field",

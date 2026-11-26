@@ -59,7 +59,7 @@ pub enum Error {
     /// [`ClientBuilder::connect_timeout`]: crate::ClientBuilder::connect_timeout
     #[non_exhaustive]
     Connect {
-        /// URL of the request.
+        /// URL of the request, with its query string redacted.
         url: String,
         /// The underlying connection error.
         source: BoxError,
@@ -70,7 +70,7 @@ pub enum Error {
     /// connect limit is [`Error::Connect`] instead.
     #[non_exhaustive]
     Timeout {
-        /// URL of the request.
+        /// URL of the request, with its query string redacted.
         url: String,
         /// The timeout that was exceeded.
         after: Duration,
@@ -78,7 +78,7 @@ pub enum Error {
     /// The request failed for another transport-level reason.
     #[non_exhaustive]
     Request {
-        /// URL of the request.
+        /// URL of the request, with its query string redacted.
         url: String,
         /// The underlying transport error.
         source: BoxError,
@@ -88,7 +88,7 @@ pub enum Error {
     Status {
         /// HTTP status code of the response.
         status: u16,
-        /// URL of the request.
+        /// URL of the request, with its query string redacted.
         url: String,
         /// Response body, decoded lossily as UTF-8. The error message only
         /// shows its first 1 KiB.
@@ -102,16 +102,17 @@ pub enum Error {
     Redirect {
         /// HTTP status code of the response (3xx).
         status: u16,
-        /// URL of the request.
+        /// URL of the request, with its query string redacted.
         url: String,
         /// Target of the redirect, from the `Location` header, resolved
-        /// against `url`.
+        /// against the request's URL. It keeps its query string, so it can
+        /// be followed; the error message shows the query redacted.
         location: String,
     },
     /// The response body could not be decoded.
     #[non_exhaustive]
     Decode {
-        /// URL of the request.
+        /// URL of the request, with its query string redacted.
         url: String,
         /// The underlying decoding error.
         source: BoxError,
@@ -302,8 +303,9 @@ impl fmt::Display for Error {
                 location,
             } => write!(
                 f,
-                "request to {url} was redirected to {location} with status code {status}, \
-                 which was not followed"
+                "request to {url} was redirected to {} with status code {status}, \
+                 which was not followed",
+                redact_query(location)
             ),
             Error::Decode { url, .. } => write!(f, "could not decode response from {url}"),
             Error::Pagination { reason } => write!(f, "pagination failed: {reason}"),
@@ -402,6 +404,16 @@ fn write_profile_problem(
 }
 
 /// Writes `text`, cut to its first [`MAX_DISPLAYED_BODY`] bytes.
+/// `url` with its query string replaced by `<redacted>`, for errors. A query
+/// can hold credentials, such as a presigned URL's signature, and errors end
+/// up in logs.
+pub(crate) fn redact_query(url: &str) -> String {
+    match url.split_once('?') {
+        Some((base, _)) => format!("{base}?<redacted>"),
+        None => url.to_owned(),
+    }
+}
+
 fn write_truncated(f: &mut fmt::Formatter<'_>, text: &str) -> fmt::Result {
     if text.len() <= MAX_DISPLAYED_BODY {
         return f.write_str(text);
@@ -450,6 +462,29 @@ mod tests {
         let error = request_error("cause".into());
         assert_eq!(error.to_string(), "request to https://host failed");
         assert_eq!(error.source().unwrap().to_string(), "cause");
+    }
+
+    #[test]
+    fn redacts_query_strings() {
+        assert_eq!(
+            redact_query("https://bucket/key?X-Amz-Signature=abc&x-id=PutObject"),
+            "https://bucket/key?<redacted>"
+        );
+        assert_eq!(redact_query("https://host/v1/apps"), "https://host/v1/apps");
+    }
+
+    #[test]
+    fn shows_redirect_targets_without_their_query() {
+        let error = Error::Redirect {
+            status: 302,
+            url: "https://host/asset".to_owned(),
+            location: "https://cdn/asset?sig=secret".to_owned(),
+        };
+        assert_eq!(
+            error.to_string(),
+            "request to https://host/asset was redirected to https://cdn/asset?<redacted> \
+             with status code 302, which was not followed"
+        );
     }
 
     fn status_error(body: String) -> String {

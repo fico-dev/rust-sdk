@@ -106,10 +106,7 @@ impl Platform {
         // they go over the account that was sent.
         let changed: Map<String, Value> = response.json()?;
         account.extend(changed);
-        serde_json::from_value(Value::Object(account)).map_err(|error| Error::Decode {
-            url: response.url().to_owned(),
-            source: Box::new(error),
-        })
+        serde_json::from_value(Value::Object(account)).map_err(|error| response.decode_error(error))
     }
 
     /// Deletes an account.

@@ -6,6 +6,7 @@ use reqwest::Url;
 use reqwest::header::HeaderMap;
 use serde::de::DeserializeOwned;
 
+use crate::error::redact_query;
 use crate::{Error, Result};
 
 /// A response whose body has been read into memory.
@@ -88,7 +89,7 @@ impl Response {
         {
             return Err(Error::Redirect {
                 status: self.status,
-                url: self.url,
+                url: redact_query(&self.url),
                 location,
             });
         }
@@ -98,7 +99,7 @@ impl Response {
         Err(Error::Status {
             status: self.status,
             body: String::from_utf8_lossy(&self.body).into_owned(),
-            url: self.url,
+            url: redact_query(&self.url),
         })
     }
 
@@ -109,9 +110,13 @@ impl Response {
         Some(resolved.map_or_else(|_| location.to_owned(), String::from))
     }
 
-    fn decode_error(&self, error: impl std::error::Error + Send + Sync + 'static) -> Error {
+    /// An [`Error::Decode`] for this response, with `error` as the source.
+    pub(crate) fn decode_error(
+        &self,
+        error: impl std::error::Error + Send + Sync + 'static,
+    ) -> Error {
         Error::Decode {
-            url: self.url.clone(),
+            url: redact_query(&self.url),
             source: Box::new(error),
         }
     }
@@ -121,7 +126,7 @@ impl fmt::Debug for Response {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("Response")
             .field("status", &self.status)
-            .field("url", &self.url)
+            .field("url", &redact_query(&self.url))
             .field("body_len", &self.body.len())
             .finish_non_exhaustive()
     }
