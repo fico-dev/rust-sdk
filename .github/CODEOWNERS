@@ -1,14 +1,14 @@
 # Changes to CI, the dependency policy, the toolchain, the dependencies and
 # their locked versions, and the dev tooling that runs on contributors'
-# machines need a review from an admin.
-/.github/                 @fico-dev/admin
-/deny.toml                @fico-dev/admin
-/rust-toolchain.toml      @fico-dev/admin
-/Cargo.toml               @fico-dev/admin
-/Cargo.lock               @fico-dev/admin
-/justfile                 @fico-dev/admin
-/.pre-commit-config.yaml  @fico-dev/admin
-/scripts/                 @fico-dev/admin
-/pyproject.toml           @fico-dev/admin
-/uv.lock                  @fico-dev/admin
-/.python-version          @fico-dev/admin
+# machines need a review from a member of @fico-dev/dev.
+/.github/                 @fico-dev/dev
+/deny.toml                @fico-dev/dev
+/rust-toolchain.toml      @fico-dev/dev
+/Cargo.toml               @fico-dev/dev
+/Cargo.lock               @fico-dev/dev
+/justfile                 @fico-dev/dev
+/.pre-commit-config.yaml  @fico-dev/dev
+/scripts/                 @fico-dev/dev
+/pyproject.toml           @fico-dev/dev
+/uv.lock                  @fico-dev/dev
+/.python-version          @fico-dev/dev
