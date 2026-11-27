@@ -109,6 +109,31 @@ The `integration tests` workflow (`.github/workflows/integration.yml`) runs
 each suite in its own job, with `FICO_API_KEY` set from the repository secret
 `FICO_DECISIONOPS_API_KEY`.
 
+## Releasing
+
+The `release` workflow (`.github/workflows/release.yml`) runs when a push
+changes `Cargo.toml`. If the version there has no `v<version>` tag yet, it
+publishes the crate to crates.io, then tags the commit and creates a GitHub
+release with generated notes. To retry a failed release, re-run the run's
+failed jobs. Re-running all of them, or pushing again, publishes again, which
+fails once crates.io has the version.
+
+- **Stable release**: open a PR against `main` that sets `version` in
+  `Cargo.toml`, such as `0.2.0`, and run `cargo check` to update `Cargo.lock`.
+  The release runs when the PR is merged, with no further approval: the PR's
+  approval is its review. Its notes cover every change since the last stable
+  release.
+- **Pre-release**: on any other branch, set a pre-release version, such as
+  `0.2.0-rc.1`, update `Cargo.lock` the same way, and push. The publish job
+  waits until a member of `@fico-dev/dev` other than you approves it in the
+  `prerelease` environment. Before approving, check the run's version and the
+  branch's code. The GitHub release is marked as a pre-release. Cargo only
+  picks a pre-release for a dependent that asks for one, as in
+  `fico-sdk = "0.2.0-rc.1"`.
+
+A stable version on another branch, or a pre-release version on `main`, isn't
+released.
+
 ## Upgrading `uv`
 
 The SDK pins the `uv` it installs for push and local Python runs, in
