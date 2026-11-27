@@ -1002,7 +1002,9 @@ fn yaml_error(e: &serde_saphyr::Error) -> String {
         | YamlError::Eof { .. } => return e.to_string(),
         YamlError::NonFiniteFloat { .. } => "is not a finite number: quote it",
         // A merge key (`<<`) wraps the error of the value it merges.
-        YamlError::AliasError { msg, .. } if msg.starts_with("non-finite float") => {
+        YamlError::AliasError { error, .. }
+            if matches!(unaliased(error), YamlError::NonFiniteFloat { .. }) =>
+        {
             "is not a finite number: quote it"
         }
         _ => "is not valid here",
@@ -1015,6 +1017,14 @@ fn yaml_error(e: &serde_saphyr::Error) -> String {
         ),
         None => format!("a value {what}"),
     }
+}
+
+/// The error that `e` wraps in alias errors and snippets, if any.
+fn unaliased(mut e: &serde_saphyr::Error) -> &serde_saphyr::Error {
+    while let serde_saphyr::Error::AliasError { error, .. } = e.without_snippet() {
+        e = error;
+    }
+    e.without_snippet()
 }
 
 /// The mapping under the root key `key`, empty when it is missing.
