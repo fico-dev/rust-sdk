@@ -171,38 +171,46 @@ decision_manifest_validate(src="my-workspace")
 ## Step 3: Write `main.py`
 
 Workspaces read options as command-line flags (`-duration 30s`), as the
-manifest lists them. With the `nextmv` Python library, declare the options in
-code, because it only reads them from a manifest named `app.yaml`:
+manifest lists them. Declare each option with `argparse`, with the
+manifest's name, type and default, and ignore the flags it does not declare:
 
 ```python
-import nextmv
+import argparse
 
-OPTIONS = nextmv.Options(
-    nextmv.Option("duration", str, default="30s", description="How long the solver may run."),
-)
+parser = argparse.ArgumentParser(allow_abbrev=False)
+parser.add_argument("-duration", "--duration", type=str, default="30s",
+                    help="How long the solver may run.")
+options, _ = parser.parse_known_args()
 ```
+
+A `bool` option comes as text (`-verbose true`): parse it with
+`type=lambda value: value.lower() == "true"`, not `type=bool`.
 
 ### JSON format: read and write
 
 ```python
-input = nextmv.load(options=OPTIONS)
-data = input.data
-options = input.options
+import json
+import sys
 
-nextmv.redirect_stdout()  # Solver logs go to stderr, not stdout.
+data = json.load(sys.stdin)
 
-nextmv.write(
-    options=options,
-    solution={"assignments": [...]},
-    metrics={"result_value": objective_value, "status": "optimal"},
-    assets=[chart],
-)
+stdout = sys.stdout
+sys.stdout = sys.stderr  # Solver logs go to stderr, not stdout.
+
+# ... solver ...
+
+print(json.dumps({
+    "options": vars(options),
+    "solution": {"assignments": [...]},
+    "assets": [chart],
+    "metrics": {"result_value": objective_value, "status": "optimal"},
+}, indent=2), file=stdout)
 ```
 
 ### Multi-file format: read and write
 
-Read the input files directly, and write the output files to disk. Do not
-call `nextmv.load`.
+Read the input files directly, not stdin, and write the output files to
+disk.
 
 ```python
 import csv, json, os
@@ -225,25 +233,13 @@ with open("outputs/metrics.json", "w") as f:
 # In each asset: visual.schema and visual.type (NOT visual_schema/visual_type),
 # and content stays a list (do not unwrap it with [0]).
 with open("outputs/assets.json", "w") as f:
-    json.dump({"assets": [
-        {
-            "name": a.name,
-            "content_type": a.content_type,
-            "visual": {
-                "schema": a.visual.visual_schema.value,
-                "type": a.visual.visual_type,
-                "label": a.visual.label,
-            },
-            "content": a.content,
-        }
-        for a in charts
-    ]}, f)
+    json.dump({"assets": charts}, f)  # The assets of visuals.py.
 ```
 
 ### Logs
 
-Write progress to stderr, e.g. with `nextmv.log(...)`. stdout is the output
-of a JSON workspace.
+Write progress to stderr, e.g. with `print(..., file=sys.stderr)`. stdout is
+the output of a JSON workspace.
 
 ---
 
@@ -251,36 +247,28 @@ of a JSON workspace.
 
 ```python
 import json
-import nextmv
 import plotly.graph_objects as go
 
 
-def build_chart(solution, input_data, label="Solution", tab_order=1):
+def build_chart(solution, input_data, label="Solution"):
     fig = go.Figure()
     fig.add_trace(go.Scatter(...))
     fig.update_layout(title=label)
 
-    return nextmv.Asset(
-        name=label,
-        content_type="json",
-        visual=nextmv.Visual(
-            visual_schema=nextmv.VisualSchema.PLOTLY,
-            visual_type="custom-tab",
-            label=label,
-            tab_order=tab_order,
-        ),
-        content=[json.loads(fig.to_json())],
-    )
+    return {
+        "name": label,
+        "content_type": "json",
+        "visual": {"schema": "plotly", "type": "custom-tab", "label": label},
+        "content": [json.loads(fig.to_json())],
+    }
 ```
-
-Use `tab_order=1` for the first chart, and count up for each one after it.
 
 ---
 
 ## Step 5: Pin the dependencies
 
 Pin every dependency in `pyproject.toml` (or `requirements.txt`), including
-`nextmv` and `plotly`.
+`plotly`.
 
 ---
 

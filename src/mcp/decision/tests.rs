@@ -1495,14 +1495,10 @@ async fn returns_the_guide() {
             );
         }
     }
-    // FICO names, and nothing out of scope.
-    for word in [
-        "app.yaml\n",
-        "instance",
-        "Nextmv Cloud",
-        "statistics",
-        "batch",
-    ] {
+    // FICO names, and nothing out of scope, in any case. The runtime images
+    // keep their registry, the only Nextmv name left.
+    let guide = guide.replace("ghcr.io/nextmv-io/", "").to_lowercase();
+    for word in ["app.yaml\n", "instance", "nextmv", "statistics", "batch"] {
         assert!(!guide.contains(word), "{word:?}");
     }
 }
